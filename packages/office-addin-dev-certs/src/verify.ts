@@ -9,25 +9,17 @@ import * as defaults from "./defaults";
 import { usageDataObject } from "./defaults";
 import { ExpectedError } from "office-addin-usage-data";
 
-// On win32 this is a unique hash used with PowerShell command to reliably delineate command output
-export const outputMarker = process.platform === "win32" ? `[${crypto.createHash("md5").update(`${defaults.certificateName}${defaults.caCertificatePath}`).digest("hex")}]` : "";
-
-/* global process, Buffer, __dirname */
-
-function getVerifyCommand(returnInvalidCertificate: boolean): string {
-  switch (process.platform) {
-    case "win32": {
-      const script = path.resolve(__dirname, "..\\scripts\\verify.ps1");
-      const defaultCommand = `powershell -ExecutionPolicy Bypass -File "${script}" -CaCertificateName "${defaults.certificateName}" -CaCertificatePath "${defaults.caCertificatePath}" -LocalhostCertificatePath "${defaults.localhostCertificatePath}" -OutputMarker "${outputMarker}"`;
-      if (returnInvalidCertificate) {
-        return defaultCommand + ` -ReturnInvalidCertificate`;
-      }
-      return defaultCommand;
-    }
-    case "darwin": {
-      // macOS
-      const script = path.resolve(__dirname, "../scripts/verify.sh");
-      return `sh '${script}' '${defaults.certificateName}'`;
+function getVerifyCommand(): string {
+    switch (process.platform) {
+       case "win32":
+          const script = path.resolve(__dirname, "..\\scripts\\verify.ps1");
+          return `powershell -ExecutionPolicy Bypass -File "${script}" "${defaults.certificateName}"`;
+       case "darwin": // macOS
+          return `security find-certificate -c '${defaults.certificateName}' -p | openssl x509 -checkend 86400 -noout`;
+       case "linux":
+         return `[ -f /usr/local/share/ca-certificates/office-addin-dev-certs/${defaults.caCertificateFileName} ] && openssl x509 -in /usr/local/share/ca-certificates/office-addin-dev-certs/${defaults.caCertificateFileName} -checkend 86400 -noout`;
+       default:
+          throw new Error(`Platform not supported: ${process.platform}`);
     }
     case "linux":
       return `[ -f /usr/local/share/ca-certificates/office-addin-dev-certs/${defaults.caCertificateFileName} ] && openssl x509 -in /usr/local/share/ca-certificates/office-addin-dev-certs/${defaults.caCertificateFileName} -checkend 86400 -noout`;

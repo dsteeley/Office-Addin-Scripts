@@ -13,22 +13,17 @@ import { ExpectedError } from "office-addin-usage-data";
 /* global process, console, __dirname */
 
 function getInstallCommand(caCertificatePath: string, machine: boolean = false): string {
-  switch (process.platform) {
-    case "win32": {
-      const script = path.resolve(__dirname, "..\\scripts\\install.ps1");
-      return `powershell -ExecutionPolicy Bypass -File "${script}" ${
-        machine ? "LocalMachine" : "CurrentUser"
-      } "${caCertificatePath}"`;
-    }
-    case "darwin": // macOS
-      const prefix = machine ? "sudo " : ""
-      const keychainFile = machine ? "/Library/Keychains/System.keychain" : "~/Library/Keychains/login.keychain-db"
-      return `${prefix}security add-trusted-cert -d -r trustRoot -k ${keychainFile} '${caCertificatePath}'`;
-    case "linux":
-      return `sudo mkdir -p /usr/local/share/ca-certificates/office-addin-dev-certs && sudo cp ${caCertificatePath} /usr/local/share/ca-certificates/office-addin-dev-certs && sudo /usr/sbin/update-ca-certificates`;
-    default:
-      throw new ExpectedError(`Platform not supported: ${process.platform}`);
-  }
+   switch (process.platform) {
+      case "win32":
+         const script = path.resolve(__dirname, "..\\scripts\\install.ps1");
+         return `powershell -ExecutionPolicy Bypass -File "${script}" ${machine ? "LocalMachine" : "CurrentUser"} "${caCertificatePath}"`;
+      case "darwin": // macOS
+         return `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain '${caCertificatePath}'`;
+      case "linux":
+        return `sudo mkdir -p /usr/local/share/ca-certificates/office-addin-dev-certs && sudo cp ${defaults.caCertificatePath} /usr/local/share/ca-certificates/office-addin-dev-certs && sudo /usr/sbin/update-ca-certificates`;
+      default:
+         throw new Error(`Platform not supported: ${process.platform}`);
+   }
 }
 
 export async function ensureCertificatesAreInstalled(

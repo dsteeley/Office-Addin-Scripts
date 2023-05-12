@@ -12,23 +12,17 @@ import { ExpectedError } from "office-addin-usage-data";
 /* global process, console, __dirname */
 
 function getUninstallCommand(machine: boolean = false): string {
-  switch (process.platform) {
-    case "win32": {
-      const script = path.resolve(__dirname, "..\\scripts\\uninstall.ps1");
-      return `powershell -ExecutionPolicy Bypass -File "${script}" ${machine ? "LocalMachine" : "CurrentUser"} "${
-        defaults.certificateName
-      }"`;
-    }
-    case "darwin": {
-      // macOS
-      const script = path.resolve(__dirname, "../scripts/uninstall.sh");
-      return `sudo sh '${script}' '${defaults.certificateName}'`;
-    }
-    case "linux":
-      return `sudo rm -r /usr/local/share/ca-certificates/office-addin-dev-certs/${defaults.caCertificateFileName} && sudo /usr/sbin/update-ca-certificates --fresh`;
-    default:
-      throw new ExpectedError(`Platform not supported: ${process.platform}`);
-  }
+   switch (process.platform) {
+      case "win32":
+         const script = path.resolve(__dirname, "..\\scripts\\uninstall.ps1");
+         return `powershell -ExecutionPolicy Bypass -File "${script}" ${machine ? "LocalMachine" : "CurrentUser"} "${defaults.certificateName}"`;
+      case "darwin": // macOS
+         return `sudo security delete-certificate -c '${defaults.certificateName}'`;
+      case "linux":
+        return `sudo rm /usr/local/share/ca-certificates/office-addin-dev-certs/${defaults.caCertificateFileName} && sudo /usr/sbin/update-ca-certificates --fresh`
+      default:
+         throw new Error(`Platform not supported: ${process.platform}`);
+   }
 }
 
 // Deletes the generated certificate files and delete the certificate directory if its empty
